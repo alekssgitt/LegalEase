@@ -1,0 +1,179 @@
+prompts:
+  # Document analysis prompt
+  - id: analyze_document
+    path: tests/prompts/analyze_document.txt
+  
+  # Q&A prompt (general)
+  - id: qa_general
+    path: tests/prompts/qa_general.txt
+  
+  # Q&A prompt (RAG with context)
+  - id: qa_rag
+    path: tests/prompts/qa_rag.txt
+
+providers:
+  - id: legalai
+    provider: ollama:legalai
+    config:
+      temperature: 0.1
+      max_tokens: 1024
+
+  - id: qa_model
+    provider: ollama:llama3.2
+    config:
+      temperature: 0.2
+      max_tokens: 512
+
+tests:
+  # Document analysis tests
+  - name: "Lease Agreement Analysis - Student"
+    vars:
+      user_type: student
+      experience_level: beginner
+      document_content: |
+        RESIDENTIAL LEASE AGREEMENT
+        This agreement made on January 1, 2025, between Landlord and Tenant.
+        Tenant agrees to pay $1,500 per month on the first day of each month.
+        Tenant shall maintain the property in good condition.
+        Tenant shall not sublet without written permission from Landlord.
+        Late fees of $50 apply for payments received after the 5th of the month.
+    prompt: analyze_document
+    provider: legalai
+    assert:
+      - type: contains
+        value: "summary"
+        ignoreCase: true
+      - type: contains
+        value: "rent"
+      - type: contains
+        value: "$1,500"
+      - type: contains
+        value: "late fee"
+      - type: contains
+        value: "sublet"
+      - type: contains
+        value: "maintain"
+      - type: llm-rubric
+        value: |
+          Score from 1-5 based on these criteria:
+          1. Does it provide a clear summary?
+          2. Does it identify key obligations (payment, maintenance)?
+          3. Does it highlight risks (late fees, subletting restrictions)?
+          4. Is the language appropriate for a student with beginner experience?
+          5. Does it provide actionable recommendations?
+        threshold: 3.5
+  
+  - name: "Employment Contract Analysis - Business Owner"
+    vars:
+      user_type: business_owner
+      experience_level: intermediate
+      document_content: |
+        EMPLOYMENT AGREEMENT
+        This agreement is between Employer and Employee, effective March 15, 2025.
+        Employee shall be paid $75,000 annually, paid bi-weekly.
+        Employee shall receive 15 days of paid time off annually.
+        Employee agrees to a non-compete clause for 12 months after termination.
+        Intellectual property created during employment belongs to Employer.
+        Either party may terminate with 30 days written notice.
+    prompt: analyze_document
+    provider: legalai
+    assert:
+      - type: contains
+        value: "non-compete"
+      - type: contains
+        value: "intellectual property"
+      - type: contains
+        value: "termination"
+      - type: contains
+        value: "$75,000"
+      - type: llm-rubric
+        value: |
+          Score from 1-5 based on these criteria:
+          1. Does it analyze business implications clearly?
+          2. Does it identify key employer protections?
+          3. Does it highlight potential risks for a business owner?
+          4. Is the language appropriate for intermediate experience level?
+          5. Does it provide business-relevant recommendations?
+        threshold: 3.5
+
+  # Q&A tests (general legal questions)
+  - name: "General Legal Question - What is a lease?"
+    vars:
+      question: "What is a residential lease agreement?"
+    prompt: qa_general
+    provider: qa_model
+    assert:
+      - type: contains
+        value: "lease"
+      - type: contains
+        value: "tenant"
+      - type: contains
+        value: "landlord"
+      - type: contains
+        value: "property"
+      - type: llm-rubric
+        value: |
+          Score from 1-5 based on these criteria:
+          1. Does it clearly define what a lease agreement is?
+          2. Does it mention the key parties involved?
+          3. Does it explain the purpose of the agreement?
+          4. Is the explanation concise and easy to understand?
+          5. Is the information legally accurate?
+        threshold: 3.5
+
+  # Q&A tests (with document context)
+  - name: "Document-based Question - Rent Due Date"
+    vars:
+      context: |
+        RESIDENTIAL LEASE AGREEMENT
+        This agreement made on January 1, 2025, between Landlord and Tenant.
+        Tenant agrees to pay $1,500 per month on the first day of each month.
+        Tenant shall maintain the property in good condition.
+        Late fees of $50 apply for payments received after the 5th of the month.
+      question: "When is the rent due according to this lease?"
+    prompt: qa_rag
+    provider: qa_model
+    assert:
+      - type: contains
+        value: "first day"
+      - type: contains
+        value: "each month"
+      - type: contains
+        value: "$1,500"
+      - type: llm-rubric
+        value: |
+          Score from 1-5 based on these criteria:
+          1. Does it directly answer the question about rent due date?
+          2. Does it reference the specific date from the document?
+          3. Does it avoid adding information not in the context?
+          4. Is the answer concise and clear?
+          5. Does it mention relevant details like the amount?
+        threshold: 4.0
+
+  - name: "Document-based Question - Late Fees"
+    vars:
+      context: |
+        RESIDENTIAL LEASE AGREEMENT
+        This agreement made on January 1, 2025, between Landlord and Tenant.
+        Tenant agrees to pay $1,500 per month on the first day of each month.
+        Tenant shall maintain the property in good condition.
+        Late fees of $50 apply for payments received after the 5th of the month.
+      question: "What happens if I pay my rent late?"
+    prompt: qa_rag
+    provider: qa_model
+    assert:
+      - type: contains
+        value: "$50"
+      - type: contains
+        value: "late fee"
+      - type: contains
+        value: "5th"
+      - type: llm-rubric
+        value: |
+          Score from 1-5 based on these criteria:
+          1. Does it directly answer the question about late payment consequences?
+          2. Does it specify the late fee amount?
+          3. Does it mention when the late fee applies?
+          4. Does it avoid adding information not in the context?
+          5. Is the answer clear and concise?
+        threshold: 4.0

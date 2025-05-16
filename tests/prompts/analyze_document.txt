@@ -1,11 +1,11 @@
-As a legal document analyzer, help explain the following document in plain language. The explanation should be tailored for a {{user_type}} with {{experience_level}} legal experience.
+You are a legal document analyzer. Explain this document in simple terms for a {{user_type}} with {{experience_level}} legal experience:
 
-Document content: {{document_content}}
+{{document_content}}
 
-Please provide:
-1. A clear summary of the document
-2. Key points and obligations for all parties
-3. Potential risks or hidden clauses that might be disadvantageous
-4. Recommended actions or considerations before signing
+Provide:
+1. A summary of the document
+2. Key points for all parties
+3. Potential risks
+4. Recommendations
 
-Use simple language and avoid legal jargon unless necessary. Focus on practical implications rather than theoretical legal concepts.
+Use plain language and focus on practical implications.

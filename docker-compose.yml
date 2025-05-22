@@ -1,18 +1,13 @@
-version: '3.8'
-
 services:
   api:
-    image: python:3.11-slim
-    working_dir: /app
-    volumes:
-      - .:/app
+    build: .
     ports:
       - "8000:8000"
-    command: >
-      sh -c "pip install -r requirements.txt &&
-             uvicorn api.main:app --host 0.0.0.0 --port 8000"
     depends_on:
-      - ollama
+      ollama:
+        condition: service_started
+      init-ollama:
+        condition: service_completed_successfully
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
     networks:
@@ -26,16 +21,34 @@ services:
       - ollama_models:/root/.ollama
     networks:
       - backend
+    environment:
+      - OLLAMA_KEEP_ALIVE=-1
+    privileged: true
 
   init-ollama:
-    image: curlimages/curl:latest
+    image: ollama/ollama
     volumes:
       - ./init-models.sh:/init-models.sh
+      - ./LegalAI:/app/LegalAI:ro
+
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        chmod +x /init-models.sh && \
+        echo "Waiting for Ollama service to be ready..." && \
+        while ! ollama list > /dev/null 2>&1; do \
+          echo "Ollama not responding yet (OLLAMA_HOST: $OLLAMA_HOST), sleeping for 5 seconds..." && \
+          sleep 5; \
+        done && \
+        echo "Ollama service is responsive. Running init-models.sh..." && \
+        /init-models.sh
     depends_on:
-      - ollama
-    command: sh /init-models.sh
+      ollama:
+        condition: service_started
     networks:
       - backend
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
 
 volumes:
   ollama_models:

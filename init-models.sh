@@ -1,35 +1,23 @@
 #!/bin/sh
+set -e
 
-echo "Checking if Ollama is running..."
+echo "Checking if Ollama is running"
 
-# Check if llama3.2 model exists
-echo "Checking if llama3.2 model is available..."
-llama_check=$(curl -s http://localhost:11434/api/tags | grep llama3.2)
+echo "Checking if llama3.2 model is available"
+llama_check=$(ollama list | grep llama3.2 || true)
 if [ -z "$llama_check" ]; then
-  echo "Pulling llama3.2 model..."
-  curl -X POST http://localhost:11434/api/pull -d '{"name":"llama3.2"}'
+  echo "Pulling llama3.2"
+  ollama pull llama3.2
+  echo "llama3.2 model pulled."
 else
   echo "llama3.2 model is already available"
 fi
 
-sleep 2
+sleep 10
 
-# Create the LegalAI model
-echo "Creating LegalAI model..."
-MODELFILE="FROM llama3.2
-PARAMETER temperature 0.2
-SYSTEM \"\"\"
-You are LegalAI, an expert legal document analyzer. Your job is to:
-- Explain legal documents in plain language.
-- Tailor explanations for the user's type and legal experience.
-- Provide:
-  1. A clear summary
-  2. Key points and obligations
-  3. Potential risks or hidden clauses
-  4. Recommended actions
-Always be concise, accurate, and user-friendly. If the document is complex, break down the explanation into manageable sections.
-\"\"\""
+echo "Creating LegalAI model using existing Modelfile"
 
-curl -X POST http://localhost:11434/api/create -d "{\"name\":\"legalai\", \"modelfile\":\"$MODELFILE\"}"
+echo "Attempting to create LegalAI model"
+ollama create legalai -f /app/LegalAI/modelfile
 
 echo "Model initialization completed!"

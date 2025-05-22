@@ -1,3 +1,4 @@
+import os
 from langchain_community.llms import Ollama
 from langchain.prompts import PromptTemplate
 from langchain.memory import ConversationBufferMemory
@@ -5,7 +6,8 @@ from langchain.chains import ConversationChain
 
 class LLMManager:
     def __init__(self, model_name="LegalAI"):
-        self.llm = Ollama(model=model_name, base_url="http://localhost:11434")
+        base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+        self.llm = Ollama(model=model_name, base_url=base_url)
         self.memory = ConversationBufferMemory()
         
         self.base_prompt = PromptTemplate(
@@ -24,17 +26,17 @@ class LLMManager:
         )
         
     def analyze_document(self, document_content: str, user_profile: dict) -> str:
-
-        prompt = self.base_prompt.format(
+        prompt_text = self.base_prompt.format(
             user_type=user_profile["type"],
             experience_level=user_profile["experience_level"],
             document_content=document_content
         )
-        
-        chain = ConversationChain(
-            llm=self.llm,
-            memory=self.memory,
-            verbose=True
-        )
-        
-        return chain.run(prompt)
+        try:
+            response = self.llm.invoke(prompt_text)
+
+            if hasattr(response, 'content'):
+                return response.content
+            return response
+        except Exception as e:
+            print(f"Error during LLM invocation in analyze_document: {e}")
+            raise

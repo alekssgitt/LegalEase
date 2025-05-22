@@ -350,7 +350,7 @@ class LegalEaseUI:
                 f"{self.api_url}/analyze",
                 files=files,
                 data=data,
-                timeout=300.0
+                timeout=1000
             )
             
             self.response_area.controls.remove(loading_msg)
@@ -382,7 +382,7 @@ class LegalEaseUI:
                 
         except httpx.ReadTimeout:
             self.add_response_message(
-                "Request timed out after 5 minutes. The analysis is taking longer than expected.",
+                "Request timed out after 10 minutes. The analysis is taking longer than expected.",
                 is_error=True
             )
         except Exception as ex:

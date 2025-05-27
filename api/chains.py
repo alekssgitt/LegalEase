@@ -1,16 +1,14 @@
 from typing import Dict, Any
-from core.llm_manager import LLMManager
+from core.llm_manager import llm_manager_analysis, llm_manager_qa
 from services.document_processor import DocumentProcessor
 import logging
 
 logger = logging.getLogger(__name__)
 
-llm_manager_analysis = LLMManager(model_name="LegalAI")
-llm_manager_qa = LLMManager(model_name="llama3.2")
 document_processor = DocumentProcessor()
 
 
-def parse_analysis_output(text: str):
+def parseAnalysisOutput(text: str):
     sections = {"summary": "", "key_points": [], "risks": [], "recommendations": []}
     current = "summary"
     for line in text.splitlines():
@@ -34,7 +32,7 @@ def parse_analysis_output(text: str):
     return sections
 
 
-def analyze_chain(request: Dict[str, Any]) -> Dict[str, Any]:
+def analyzeChain(request: Dict[str, Any]) -> Dict[str, Any]:
     file = request['file']
     profile_type = request.get('profile_type', 'user')
     experience_level = request.get('experience_level', 'beginner')
@@ -46,19 +44,15 @@ def analyze_chain(request: Dict[str, Any]) -> Dict[str, Any]:
         file_content = file.file if hasattr(file, 'file') else file
         content_type = "application/pdf" if getattr(file, 'filename', '').lower().endswith('.pdf') else "text/plain"
     
-    text = document_processor.extract_text(file_content, content_type)
-    result = llm_manager_analysis.analyze_document(
+    text = document_processor.extractText(file_content, content_type)
+    result_text = llm_manager_analysis.analyzeDocument(
         text,
         {"type": profile_type, "experience_level": experience_level}
     )
-    if isinstance(result, dict) and "response" in result:
-        result_text = result["response"]
-    else:
-        result_text = result
-    return parse_analysis_output(result_text)
+    return parseAnalysisOutput(result_text)
 
 
-def rag_chain(request: Dict[str, Any]) -> Dict[str, Any]:
+def ragChain(request: Dict[str, Any]) -> Dict[str, Any]:
     question = request['question']
     file = request.get('file', None)
     try:
@@ -70,9 +64,9 @@ def rag_chain(request: Dict[str, Any]) -> Dict[str, Any]:
                 file_content = file.file if hasattr(file, 'file') else file
                 content_type = "application/pdf" if getattr(file, 'filename', '').lower().endswith('.pdf') else "text/plain"
             
-            text = document_processor.extract_text(file_content, content_type)
-            vector_store = document_processor.create_vector_store(text)
-            context_chunks = document_processor.retrieve_relevant_context(vector_store, question, k=5)
+            text = document_processor.extractText(file_content, content_type)
+            vector_store = document_processor.createVectorStore(text)
+            context_chunks = document_processor.retrieveRelevantContext(vector_store, question, k=5)
             context = "\n".join(context_chunks)
             prompt = (
                 "You are a legal assistant. Only answer the user's question based strictly on the provided context below. "
@@ -81,12 +75,12 @@ def rag_chain(request: Dict[str, Any]) -> Dict[str, Any]:
                 f"Context:\n{context}\n\nQuestion: {question}\nAnswer:"
             )
             logger.info(f"Processing question: {question}")
-            answer = llm_manager_qa.llm(prompt)
+            answer = llm_manager_qa.invokeLlm(prompt)
             return {"answer": answer}
         else:
             logger.info(f"Processing question without context: {question}")
-            answer = llm_manager_qa.llm(question)
+            answer = llm_manager_qa.invokeLlm(question)
             return {"answer": answer}
     except Exception as e:
-        logger.error(f"Error in rag_chain: {str(e)}")
+        logger.error(f"Error in ragChain: {str(e)}")
         return {"answer": "I'm sorry, I encountered an error processing your question."}

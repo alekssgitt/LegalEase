@@ -17,6 +17,7 @@ class LegalEaseUI:
         self.qa_file: Optional[str] = None
         self.qa_response_area = None
         self.qa_question_box = None
+        self.qa_selected_file_text = ft.Text("No document for Q&A context.")
         
 
         self.primary_color = "#1565C0"
@@ -26,7 +27,7 @@ class LegalEaseUI:
         self.text_color = "#212121"
         self.error_color = "#FFC107"
         
-    def main(self, page: ft.Page):
+    def initializePage(self, page: ft.Page):
         self.page = page
         
         page.title = "LegalEase"
@@ -54,15 +55,15 @@ class LegalEaseUI:
             selected_index=0,
             animation_duration=300,
             tabs=[
-                ft.Tab(text="Document Analysis", content=self._build_analysis_tab()),
-                ft.Tab(text="Legal Q&A", content=self._build_qa_tab()),
+                ft.Tab(text="Document Analysis", content=self.buildAnalysisTab()),
+                ft.Tab(text="Legal Q&A", content=self.buildQaTab()),
             ]
         )
         
         footer = ft.Container(
             content=ft.Text(" 2025 LegalEase - AI Legal Assistant", 
                            size=12, 
-                           color="#757575",  # Grey 600
+                           color="#757575",
                            text_align=ft.TextAlign.CENTER),
             padding=10,
             alignment=ft.alignment.center
@@ -70,9 +71,9 @@ class LegalEaseUI:
         
         page.add(header, tabs, footer)
 
-    def _build_analysis_tab(self):
+    def buildAnalysisTab(self):
         self.file_picker = ft.FilePicker(
-            on_result=self.on_file_picked
+            on_result=self.onFilePicked
         )
         self.page.overlay.append(self.file_picker)
         
@@ -117,7 +118,7 @@ class LegalEaseUI:
         
         clear_button = ft.ElevatedButton(
             "Clear Results",
-            on_click=self._clear_analysis_results,
+            on_click=self.clearAnalysisResults,
             style=ft.ButtonStyle(
                 color="#FFFFFF",
                 bgcolor="#FFC107",
@@ -134,7 +135,7 @@ class LegalEaseUI:
                     ),
                     padding=ft.padding.only(bottom=10),
                 ),
-                ft.Divider(height=1, color="#BDBDBD"),  # Grey 300
+                ft.Divider(height=1, color="#BDBDBD"),
                 ft.Container(
                     content=ft.Row([
                         ft.ElevatedButton(
@@ -143,7 +144,7 @@ class LegalEaseUI:
                                 allowed_extensions=["pdf", "txt"]
                             ),
                             style=ft.ButtonStyle(
-                                color="#FFFFFF",  # White
+                                color="#FFFFFF",
                                 bgcolor=self.primary_color,
                             )
                         ),
@@ -154,18 +155,18 @@ class LegalEaseUI:
                 ft.Container(
                     content=ft.Row([
                         self.profile_dropdown,
-                        ft.Container(width=10),  # Spacer
+                        ft.Container(width=10),
                         self.experience_dropdown,
-                        ft.Container(width=10),  # Spacer
+                        ft.Container(width=10),
                         ft.ElevatedButton(
                             "Analyze",
-                            on_click=self.analyze_document,
+                            on_click=self.analyzeDocument,
                             style=ft.ButtonStyle(
-                                color="#FFFFFF",  # White
+                                color="#FFFFFF",
                                 bgcolor=self.accent_color,
                             )
                         ),
-                        ft.Container(width=10),  # Spacer
+                        ft.Container(width=10),
                         clear_button,
                     ]),
                     padding=ft.padding.only(bottom=10),
@@ -175,7 +176,7 @@ class LegalEaseUI:
                         ft.Text("Analysis Results", size=16, weight=ft.FontWeight.BOLD),
                         ft.Container(
                             content=self.response_area,
-                            border=ft.border.all(1, "#BDBDBD"),  # Grey 300
+                            border=ft.border.all(1, "#BDBDBD"),
                             border_radius=10,
                             padding=15,
                             bgcolor=self.secondary_color,
@@ -187,7 +188,7 @@ class LegalEaseUI:
             padding=10,
         )
     
-    def _build_qa_tab(self):
+    def buildQaTab(self):
         self.qa_question_box = ft.TextField(
             label="Ask a legal question", 
             multiline=True, 
@@ -197,41 +198,50 @@ class LegalEaseUI:
             border_color=self.primary_color,
             focused_border_color=self.accent_color,
         )
-        
+
         self.qa_response_area = ft.Column(
             spacing=10,
             scroll=ft.ScrollMode.AUTO,
             height=400,
         )
         
-        qa_file_picker = ft.FilePicker(on_result=self._on_qa_file_picked)
+        qa_file_picker = ft.FilePicker(on_result=self.onQaFilePicked)
         self.page.overlay.append(qa_file_picker)
         
         upload_btn = ft.ElevatedButton(
-            "Upload Document", 
+            "Upload Context Doc", 
             on_click=lambda _: qa_file_picker.pick_files(allowed_extensions=["pdf", "txt"]),
             style=ft.ButtonStyle(
-                color="#FFFFFF",  # White
+                color="#FFFFFF",
                 bgcolor=self.primary_color,
+            )
+        )
+
+        clear_context_doc_btn = ft.ElevatedButton(
+            "Clear Context Doc",
+            on_click=self.clearQaDocumentContext,
+            style=ft.ButtonStyle(
+                color="#FFFFFF",
+                bgcolor=self.error_color,
             )
         )
         
         ask_btn = ft.ElevatedButton(
             "Ask Question", 
-            on_click=self._on_qa_ask,
+            on_click=self.onQaAsk,
             style=ft.ButtonStyle(
-                color="#FFFFFF",  # White
+                color="#FFFFFF",
                 bgcolor=self.accent_color,
             )
         )
         
-        # Clear button for Q&A tab
+
         clear_qa_btn = ft.ElevatedButton(
             "Clear Chat",
-            on_click=self._clear_qa_results,
+            on_click=self.clearQaResults,
             style=ft.ButtonStyle(
-                color="#FFFFFF",  # White
-                bgcolor="#FFC107",  # Red 400
+                color="#FFFFFF",
+                bgcolor="#FFC107",
             )
         )
         
@@ -245,7 +255,7 @@ class LegalEaseUI:
                     ),
                     padding=ft.padding.only(bottom=10),
                 ),
-                ft.Divider(height=1, color="#BDBDBD"),  # Grey 300
+                ft.Divider(height=1, color="#BDBDBD"),
                 ft.Container(
                     content=self.qa_question_box,
                     padding=ft.padding.only(top=10, bottom=10),
@@ -253,19 +263,25 @@ class LegalEaseUI:
                 ft.Container(
                     content=ft.Row([
                         upload_btn,
-                        ft.Container(width=10),  # Spacer
+                        ft.Container(width=10),
+                        clear_context_doc_btn,
+                        ft.Container(width=10),
                         ask_btn,
-                        ft.Container(width=10),  # Spacer
+                        ft.Container(width=10),
                         clear_qa_btn,
                     ]),
-                    padding=ft.padding.only(bottom=10),
+                    padding=ft.padding.only(bottom=5),
+                ),
+                ft.Container(
+                    content=self.qa_selected_file_text,
+                    padding=ft.padding.only(bottom=10)
                 ),
                 ft.Container(
                     content=ft.Column([
                         ft.Text("Conversation", size=16, weight=ft.FontWeight.BOLD),
                         ft.Container(
                             content=self.qa_response_area,
-                            border=ft.border.all(1, "#BDBDBD"),  # Grey 300
+                            border=ft.border.all(1, "#BDBDBD"),
                             border_radius=10,
                             padding=15,
                             bgcolor=self.secondary_color,
@@ -277,7 +293,7 @@ class LegalEaseUI:
             padding=10,
         )
 
-    def on_file_picked(self, e):
+    def onFilePicked(self, e):
         if e.files:
             self.selected_file = e.files[0]
             self.selected_file_text.value = f"Selected: {self.selected_file.name}"
@@ -286,10 +302,10 @@ class LegalEaseUI:
             self.selected_file_text.value = "No file selected"
         self.selected_file_text.update()
     
-    def add_response_message(self, text: str, is_error: bool = False):
+    def addResponseMessage(self, text: str, is_error: bool = False):
         self.response_area.controls.append(
             ft.Container(
-                content=ft.Text(text, size=14, color="#000000"),  # Black
+                content=ft.Text(text, size=14, color="#000000"),
                 bgcolor=self.error_color if is_error else self.secondary_color,
                 padding=15,
                 border_radius=10,
@@ -297,26 +313,26 @@ class LegalEaseUI:
                 shadow=ft.BoxShadow(
                     spread_radius=1,
                     blur_radius=4,
-                    color="#000000",  # Black
+                    color="#000000",
                     offset=ft.Offset(0, 2)
                 )
             )
         )
         self.response_area.update()
     
-    def _clear_analysis_results(self, e):
+    def clearAnalysisResults(self, e):
         self.response_area.controls.clear()
         self.response_area.update()
     
-    def _clear_qa_results(self, e):
+    def clearQaResults(self, e):
         self.qa_response_area.controls.clear()
         self.qa_response_area.update()
         self.qa_question_box.value = ""
         self.qa_question_box.update()
     
-    def analyze_document(self, e):
+    def analyzeDocument(self, e):
         if not self.selected_file or not self.profile_dropdown.value:
-            self.add_response_message("Please select a file and profile type first.", is_error=True)
+            self.addResponseMessage("Please select a file and profile type first.", is_error=True)
             return
         
         try:
@@ -343,11 +359,12 @@ class LegalEaseUI:
             
             data = {
                 'profile_type': self.profile_dropdown.value,
-                'experience_level': self.experience_dropdown.value
+                'experience_level': self.experience_dropdown.value,
+                'question': 'Analyze this document.'
             }
             
             response = httpx.post(
-                f"{self.api_url}/analyze",
+                f"{self.api_url}/process_input",
                 files=files,
                 data=data,
                 timeout=1000
@@ -360,50 +377,56 @@ class LegalEaseUI:
                 result = response.json()
                 
                 if result.get("summary"):
-                    self.add_response_message("Summary:\n" + result["summary"])
+                    self.addResponseMessage("Summary:\n" + result["summary"])
                 
                 if result.get("key_points"):
                     points = "\n".join(f"• {point}" for point in result["key_points"])
-                    self.add_response_message("Key Points:\n" + points)
+                    self.addResponseMessage("Key Points:\n" + points)
                 
                 if result.get("risks"):
                     risks = "\n".join(f"• {risk}" for risk in result["risks"])
-                    self.add_response_message("Risks:\n" + risks)
+                    self.addResponseMessage("Risks:\n" + risks)
                 
                 if result.get("recommendations"):
                     recs = "\n".join(f"• {rec}" for rec in result["recommendations"])
-                    self.add_response_message("Recommendations:\n" + recs)
+                    self.addResponseMessage("Recommendations:\n" + recs)
                 
             else:
-                self.add_response_message(
+                self.addResponseMessage(
                     f"Error: {response.json().get('detail', 'Unknown error')}",
                     is_error=True
                 )
                 
         except httpx.ReadTimeout:
-            self.add_response_message(
+            self.addResponseMessage(
                 "Request timed out after 10 minutes. The analysis is taking longer than expected.",
                 is_error=True
             )
         except Exception as ex:
-            self.add_response_message(f"Error: {str(ex)}", is_error=True)
+            self.addResponseMessage(f"Error: {str(ex)}", is_error=True)
 
-    def _on_qa_file_picked(self, e):
+    def onQaFilePicked(self, e):
         if e.files:
             self.qa_file = e.files[0]
-            self.qa_response_area.controls.append(
-                ft.Container(
-                    content=ft.Text(f"Selected document: {self.qa_file.name}", size=14),
-                    bgcolor=self.secondary_color,
-                    padding=10,
-                    border_radius=8,
-                )
-            )
-            self.qa_response_area.update()
+            self.qa_selected_file_text.value = f"Using context: {self.qa_file.name}"
         else:
             self.qa_file = None
+            self.qa_selected_file_text.value = "No document for Q&A context."
+        self.qa_selected_file_text.update()
 
-    def _on_qa_ask(self, e):
+    def clearQaDocumentContext(self, e):
+        self.qa_file = None
+        self.qa_selected_file_text.value = "No document for Q&A context."
+        self.qa_selected_file_text.update()
+        self.qa_response_area.controls.append(
+            ft.Container(
+                content=ft.Text("Document context cleared.", italic=True, color="#757575"),
+                padding=5,
+            )
+        )
+        self.qa_response_area.update()
+
+    def onQaAsk(self, e):
         if not self.qa_question_box.value:
             self.qa_response_area.controls.append(
                 ft.Container(
@@ -418,7 +441,7 @@ class LegalEaseUI:
         self.qa_response_area.controls.append(
             ft.Container(
                 content=ft.Text(f"You: {question}", size=14),
-                bgcolor="#F7F7F7",  # Grey 200
+                bgcolor="#F7F7F7",
                 padding=15,
                 border_radius=10,
                 width=700,
@@ -436,7 +459,11 @@ class LegalEaseUI:
         self.qa_response_area.update()
         
         try:
-            data = {'question': question}
+            data = {
+                'question': question,
+                'profile_type': 'student',
+                'experience_level': 'beginner'
+            }
             files = {}
             
             if self.qa_file:
@@ -450,7 +477,7 @@ class LegalEaseUI:
                 )
             
             response = httpx.post(
-                f"{self.api_url}/legal_qa",
+                f"{self.api_url}/process_input",
                 data=data,
                 files=files,
                 timeout=300.0
@@ -473,7 +500,7 @@ class LegalEaseUI:
                         shadow=ft.BoxShadow(
                             spread_radius=1,
                             blur_radius=4,
-                            color="#000000",  # Black
+                            color="#000000",
                             offset=ft.Offset(0, 2)
                         )
                     )
@@ -502,13 +529,13 @@ class LegalEaseUI:
         self.qa_question_box.value = ""
         self.qa_question_box.update()
 
-def main(page: ft.Page):
+def start_flet_app(page: ft.Page):
     ui = LegalEaseUI()
-    ui.main(page)
+    ui.initializePage(page)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='LegalEase UI')
-    parser.add_argument('--port', type=int, default=8550, help='Port to run the UI on')
+    parser.add_argument('--port', type=int, default=8550)
     args = parser.parse_args()
     
-    ft.app(target=main, port=args.port)
+    ft.app(target=start_flet_app, port=args.port)
